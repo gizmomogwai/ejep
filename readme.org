@@ -1,0 +1,7 @@
+* DONE connect to server and store connection in buffer local variable
+* DONE send current buffer content manually
+* TODO send buffer content automatically
+* DONE parse json results
+* DONE show error annotations in own buffer
+* TODO make problems buffer nicer
+* TODO 
