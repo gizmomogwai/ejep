@@ -4,4 +4,5 @@
 * DONE parse json results
 * DONE show error annotations in own buffer
 * TODO make problems buffer nicer
-* TODO 
+* TODO refactor some methods out to make code clearer
+* DONE experiments with font faces for error buffer

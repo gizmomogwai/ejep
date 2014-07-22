@@ -65,6 +65,7 @@ associated with process."
 (defun ejep/communication/json-response-received (process json)
   "called when a complete jep package is received"
   (message "%s got %s" process json)
+  (ejep/protocol/from-server/dispatch json 'ejep/problems/add)
   )
 
 (defun ejep/connect-to-service (port)
@@ -84,6 +85,7 @@ associated with process."
   (interactive)
   (set (make-local-variable 'ejep/communication/connection) (ejep/connect-to-service 9001))
   )
+
 (defun ejep/communication/send-current-buffer()
   "Send current buffer content"
   (interactive)
@@ -91,6 +93,52 @@ associated with process."
          (package (ejep/protocol/content-sync-as-string (expand-file-name (buffer-name)) (buffer-string))))
          (process-send-string connection package)
          ))
+
+(defun ejep/problems/jump-to (file line)
+  "jumps from the problems buffer to the file with the problem"
+  (find-file file)
+  (goto-line line (find-buffer-visiting file)))
+
+(defface ejep/problems/faces/fatal '((t (:inherit 'button :background "red"))) "ejep problems face for fatal errors" :group 'ejep/problems)
+(defface ejep/problems/faces/error '((t (:inherit 'button :foreground "red"))) "ejep problems face for errors" :group 'ejep/problems)
+(defface ejep/problems/faces/warn '((t (:inherit 'button :foreground "yellow"))) "ejep problems face for warnings" :group 'ejep/problems)
+(defface ejep/problems/faces/info '((t (:inherit 'button :foreground "white"))) "ejep problems face for info" :group 'ejep/problems)
+(defface ejep/problems/faces/debug '((t (:inherit 'button :foreground "grey"))) "ejep problems face for debug" :group 'ejep/problems)
+(defun ejep/problems/face-for-severity (severity)
+  "returns a face for severity"
+  (format "ejep/problems/faces/%s" severity))
+(insert-button "test" 'face "ejep/problems/faces/fatal")
+
+(insert-button "test" :face (ejep/problems/face-for-severity "fatal"))
+
+(defun ejep/problems/add-problem-for-file (file problem)
+  "adds one problem for a file to the ejep problems buffer"
+  (let* ((severity (cdr (assoc 'severity problem)))
+         (line (cdr (assoc 'line problem)))
+         (message (cdr (assoc 'message problem))))
+    (insert-button (format "%s %s:%s - %s\n" severity file line message)
+                   'action (lambda (button) (ejep/problems/jump-to file line))
+                   'face (ejep/problems/face-for-severity severity))))
+
+(defun ejep/problems/add-for-file (file-problems)
+  "adds problems to ejeps problems buffer for one file"
+  (let* ((file (cdr (assoc 'file file-problems)))
+         (problems (cdr (assoc 'problems file-problems))))
+    (mapcar (-partial 'ejep/problems/add-problem-for-file file) problems)))
+
+(defun ejep/problems/add (message)
+  "add problems to ejeps problems buffer"
+  (with-current-buffer (get-buffer-create "*ejep-problems*")
+    (erase-buffer)
+    (let* ((files-problems (cdr (assoc 'fileProblems message))))
+      (mapcar 'ejep/problems/add-for-file files-problems))))
+
+(defun ejep/protocol/from-server/dispatch (message problem-update)
+  "dispatches to the right function passing the whole message"
+  (let* ((type (ejep/protocol/from-server/get-message-type message)))
+    (cond
+     ((equal type "ProblemUpdate") (funcall problem-update message))
+     )))
 
 (expectations
   ;; ejep/protocol
@@ -122,33 +170,9 @@ associated with process."
   ;; ejep/communication
 
   )
-    (ejep/protocol/from-server/dispatch (json-read-from-string "{\"fileProblems\":[{\"file\":\"/Users/gizmo/Dropbox/Documents/_projects/jep/ruby-jep/demo/test.rb\",\"problems\":[{\"message\":\"unexpected token $end\",\"line\":11,\"severity\":\"error\"},{\"message\":\"something different\",\"line\":10,\"severity\":\"warning\"}]}],\"_message\":\"ProblemUpdate\"}") 'ejep/problems/add)
-(defun ejep/problems/jump-to (file line)
-  "jumps from the problems buffer to the file with the problem"
-  (find-file file)
-  (goto-line line (find-buffer-visiting file)))
 
-(defun ejep/problems/add (message)
-  "add problems to ejeps problems buffer"
-  (with-current-buffer (get-buffer-create "*ejep-problems*")
-    (erase-buffer)
-    (let* ((file-problems (cdr (assoc 'fileProblems message))))
-      (mapcar (lambda (file-problem)
-                (let* ((file (cdr (assoc 'file file-problem)))
-                       (problems (cdr (assoc 'problems file-problem))))
-                  (mapcar (lambda (problem)
-                            (let* ((severity (cdr (assoc 'severity problem)))
-                                   (line (cdr (assoc 'line problem)))
-                                   (message (cdr (assoc 'message problem))))
-                            (insert-button (format "%s %s:%s - %s\n" severity file line message) 'action (lambda (button) (ejep/problems/jump-to file line))))
-                   problems))) file-problems))))
+    ;(ejep/protocol/from-server/dispatch (json-read-from-string "{\"fileProblems\":[{\"file\":\"/Users/gizmo/Dropbox/Documents/_projects/jep/ruby-jep/demo/test.rb\",\"problems\":[{\"message\":\"unexpected token $end\",\"line\":11,\"severity\":\"error\"},{\"message\":\"something different\",\"line\":10,\"severity\":\"warn\"}]}],\"_message\":\"ProblemUpdate\"}") 'ejep/problems/add)
 
-(defun ejep/protocol/from-server/dispatch (message problem-update)
-  "dispatches to the right function passing the whole message"
-  (let* ((type (ejep/protocol/from-server/get-message-type message)))
-    (cond
-     ((equal type "ProblemUpdate") (funcall problem-update message))
-     )))
 ;;; (setq jep (ejep/connect-to-service 9001))
 
 ;;; ejep.el ends here
