@@ -1,4 +1,4 @@
-;;;; -*- lexical-binding: t -*-
+;; -*- lexical-binding: t -*-
 ;; ejep.el --- jep implementation in elisp
 ;; Copyright (C) 2014  Christian Köstlin
 ;; Author: Christian Köstlin <christian.koestlin@gmail.com>
@@ -10,8 +10,17 @@
 
 (provide 'ejep)
 
+(defvar ejep/config-filename ".jep"
+  "Filename of JEP configuration files.")
+(defvar ejep/servicestartup/glob-command-regex "\\(.*\\):\n\\(.*\\)\n"
+  "Regex used to process .jep files.")
 (defvar ejep/protocol/header "^\\([0-9]+\\):\\([0-9]+\\){"
   "Regex to parse jep headers.")
+
+(defun ejep/servicestartup/extract-first-and-second-from-match (text)
+  "Return list with the first and second match-group.
+See `string-match' and `match-string'."
+  (list (match-string 1 text) (match-string 2 text)))
 
 (defun ejep/protocol/get-json-data-and-binary (string)
   "Return the unparsed json data and the binary data."
@@ -107,9 +116,9 @@ associated with process."
 (defun ejep/problems/face-for-severity (severity)
   "returns a face for severity"
   (format "ejep/problems/faces/%s" severity))
-(insert-button "test" 'face "ejep/problems/faces/fatal")
 
-(insert-button "test" :face (ejep/problems/face-for-severity "fatal"))
+;;(insert-button "test" 'face "ejep/problems/faces/fatal")test
+;;(insert-button "test" :face (ejep/problems/face-for-severity "fatal"))test
 
 (defun ejep/problems/add-problem-for-file (file problem)
   "adds one problem for a file to the ejep problems buffer"
@@ -140,6 +149,54 @@ associated with process."
      ((equal type "ProblemUpdate") (funcall problem-update message))
      )))
 
+(defun ejep/servicestartup/parent-directory(directory)
+  "Return the parent directory of DIRECTORY."
+  (file-name-directory (directory-file-name directory)))
+
+(defun ejep/servicestartup/find-matching-jep-file
+  (filename exists-p matches-p &optional path)
+  "Return the jep-file, the command and the pattern from the first matching .jep file for FILENAME or nil.
+The first matching file is an existing .jep file in FILENAME's directory hierarchie, that has a command associated with FILENAME. EXISTS-P and MATCHES-P are used to analyze this. EXISTS-P is usually just `file-exists-p', MATCHES has to open the file and check if it contains a matching pattern and return the associated command."
+  (let* ((current-dir (expand-file-name (if path path (file-name-directory filename))))
+         (jep-file-name (expand-file-name ejep/config-filename current-dir))
+         (jep-exists (funcall exists-p jep-file-name))
+         (finished (and jep-exists (funcall matches-p jep-file-name filename))))
+    (if finished (list jep-file-name (first finished) (second finished))
+      (let* ((parent-dir (ejep/servicestartup/parent-directory current-dir))
+             (new-dir (not (string= parent-dir current-dir))))
+        (if new-dir (ejep/servicestartup/find-matching-jep-file filename exists-p matches-p parent-dir))))))
+
+;; thanks to “Pascal J Bourguignon” and “TheFlyingDutchman <zzbba...@aol.com>”. 2010-09-02
+(defun ejep/servicestartup/get-string-from-file(filename)
+  "Return FILENAME's file content."
+  (with-temp-buffer
+    (insert-file-contents filename)
+    (buffer-string)))
+
+(defun ejep/servicestartup/glob-pattern-to-regexp(pattern)
+  "Return regexp matching on the given PATTERN."
+  (let ((res ""))
+    (mapc (lambda (c) (cond
+                       ((char-equal c ?.) (setq res (concat res (list ?\\ ?.))))
+                       ((char-equal c ?*) (setq res (concat res (list ?. ?*))))
+                       (t (setq res (concat res (list c)))))) pattern)
+    res))
+
+(defun ejep/servicestartup/map-regex (text regex fn)
+  "Map the REGEX over the FILENAME executing FN.
+   FN is called for each successful `string-match' for the content of FILENAME.
+   Returns the results of the FN as a list."
+  (let* ((search-idx 0)
+         (res))
+    (while (string-match regex text search-idx)
+      (setq res (append res (list (funcall fn text))))
+      (setq search-idx (match-end 0)))
+    res))
+
+(defun ejep/servicestartup/map-regex-with-file (filename regex fn)
+  "Use `ejep/servicestartup/map-regex' with the contents of FILENAME."
+  (ejep/servicestartup/map-regex (ejep/servicestartup/get-string-from-file filename) regex fn))
+
 (expectations
   ;; ejep/protocol
   (desc "test jep protocol regexp")
@@ -158,7 +215,7 @@ associated with process."
   (expect '(((kind . "request")) "xndjs3") (ejep/protocol/get-json-and-binary "25:19{\"kind\": \"request\"}xndjs3"))
 
   (desc "jep content sync message")
-  (expect "60:52{\"_message\":\"ContentSync\", \"file\":\"my-file-name.rb\"}the data" (ejep/protocol/content-sync-as-string "my-file-name.rb" "the data"))
+  (expect "59:51{\"_message\":\"ContentSync\",\"file\":\"my-file-name.rb\"}the data" (ejep/protocol/content-sync-as-string "my-file-name.rb" "the data"))
 
   (desc "get message type")
   (expect "ProblemUpdate" (ejep/protocol/from-server/get-message-type (json-read-from-string "{\"fileProblems\":[{\"file\":\"/Users/gizmo/Dropbox/Documents/_projects/jep/ruby-jep/demo/test.rb\",\"problems\":[{\"message\":\"unexpected token $end\",\"line\":16,\"severity\":\"error\"}]}],\"_message\":\"ProblemUpdate\"}")))
@@ -169,6 +226,54 @@ associated with process."
     (ejep/protocol/from-server/dispatch (json-read-from-string "{\"fileProblems\":[{\"file\":\"/Users/gizmo/Dropbox/Documents/_projects/jep/ruby-jep/demo/test.rb\",\"problems\":[{\"message\":\"unexpected token $end\",\"line\":16,\"severity\":\"error\"}]}],\"_message\":\"ProblemUpdate\"}") 'ProblemUpdateCallback))
   ;; ejep/communication
 
+  (desc "directory-file-name gets the filename of a directory")
+  (expect "/abc/def" (directory-file-name "/abc/def/"))
+
+  (desc "file-name-directory gets the parent directory for a non directory file")
+  (expect "/abc/" (file-name-directory "/abc/test.txt"))
+
+  (desc "file-name-directory gets itself for a directory")
+  (expect "/abc/test/" (file-name-directory "/abc/test/"))
+
+  (desc "ejep/servicestartup/parent-directory")
+  (expect "/abc/" (ejep/servicestartup/parent-directory "/abc/def/"))
+
+  (desc "ejep/servicestartup/parent-directory for root yields root")
+  (expect "/" (ejep/servicestartup/parent-directory "/"))
+
+  (desc "ejep/servicestartup/find-matching-jep-file on same level as current file")
+  (expect
+      (list (expand-file-name "/my/very/long/path/.jep") "*.test" "command")
+    (ejep/servicestartup/find-matching-jep-file "/my/very/long/path/123.txt"
+                                                (lambda (file-name) (string= (expand-file-name "/my/very/long/path/.jep") file-name))
+                                                (lambda (config filename) '("*.test" "command"))))
+
+  (desc "ejep/servicestartup/find-matching-jep-file on level above current file")
+  (expect
+      (list (expand-file-name "/my/very/long/.jep") "*.test" "command")
+    (ejep/servicestartup/find-matching-jep-file "/my/very/long/path/123.txt"
+                                                (lambda (file-name) (string= (expand-file-name "/my/very/long/.jep") file-name))
+                                                (lambda (config filename) '("*.test" "command"))))
+
+  (desc "transform glob-pattern to emacs regexp")
+  (expect "abc" (ejep/servicestartup/glob-pattern-to-regexp "abc"))
+
+  (desc "transform glob-pattern with . to emacs regexp")
+  (expect "a\\.b" (ejep/servicestartup/glob-pattern-to-regexp "a.b"))
+
+  (desc "transform glob-pattern with * to emacs regexp")
+  (expect "a.*b" (ejep/servicestartup/glob-pattern-to-regexp "a*b"))
+
+  (desc "ejep/servicestartup/map-regex")
+  (expect '(("abc" "def") ("ghi" "jkl")) (ejep/servicestartup/map-regex "abc:\ndef\nghi:\njkl\n" ejep/servicestartup/glob-command-regex 'ejep/servicestartup/extract-first-and-second-from-match))
+
+  (desc "ejep/servicestartup/map-regex-with-file")
+  (expect
+      '(
+        ("*.test1" "command1")
+        ("*.test2" "command2")
+        )
+    (ejep/servicestartup/map-regex-with-file ".jep" ejep/servicestartup/glob-command-regex 'ejep/servicestartup/extract-first-and-second-from-match))
   )
 
     ;(ejep/protocol/from-server/dispatch (json-read-from-string "{\"fileProblems\":[{\"file\":\"/Users/gizmo/Dropbox/Documents/_projects/jep/ruby-jep/demo/test.rb\",\"problems\":[{\"message\":\"unexpected token $end\",\"line\":11,\"severity\":\"error\"},{\"message\":\"something different\",\"line\":10,\"severity\":\"warn\"}]}],\"_message\":\"ProblemUpdate\"}") 'ejep/problems/add)
