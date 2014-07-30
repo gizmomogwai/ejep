@@ -17,6 +17,8 @@
 (defvar ejep/protocol/header "^\\([0-9]+\\):\\([0-9]+\\){"
   "Regex to parse jep headers.")
 
+;;;"JEP service, listening on port <port>\n"
+
 (defun ejep/servicestartup/extract-first-and-second-from-match (text)
   "Return list with the first and second match-group.
 See `string-match' and `match-string'."
@@ -193,9 +195,30 @@ The first matching file is an existing .jep file in FILENAME's directory hierarc
       (setq search-idx (match-end 0)))
     res))
 
+(defun ejep/servicestartup/string-match-fully-p (pattern text)
+  "Return t if PATTERN matches TEXT fully."
+  (let ((match (string-match pattern text)))
+    (if match (eq (match-end 0) (length text)) nil)))
+
+(defun ejep/servicestartup/glob-pattern-command-matcher (pairs text)
+  "Return the matching pattern and command for TEXT.
+PAIRS is a list of regexp strings and commands."
+  (dolist (head pairs)
+    (if (ejep/servicestartup/string-match-fully-p (ejep/servicestartup/glob-pattern-to-regexp (car head)) text)
+        (return head))))
+
+(defun ejep/servicestartup/glob-pattern-command-matcher-with-file (pattern-command-file filename)
+  "Return a matching command from PATTERN-COMMAND-FILE for FILENAME or nil."
+  (let* ((pairs (ejep/servicestartup/map-regex-with-file ejep/config-filename ejep/servicestartup/glob-command-regex (function ejep/servicestartup/extract-first-and-second-from-match))))
+    (ejep/servicestartup/glob-pattern-command-matcher pairs filename)))
+
 (defun ejep/servicestartup/map-regex-with-file (filename regex fn)
   "Use `ejep/servicestartup/map-regex' with the contents of FILENAME."
   (ejep/servicestartup/map-regex (ejep/servicestartup/get-string-from-file filename) regex fn))
+
+(defun ejep/servicestartup/get-jepconfig-with-pattern-and-command (filename)
+  "Return jep-config, pattern and command for FILENAME or nil."
+  (ejep/servicestartup/find-matching-jep-file filename 'file-exists-p 'ejep/servicestartup/glob-pattern-command-matcher-with-file))
 
 (expectations
   ;; ejep/protocol
@@ -268,19 +291,48 @@ The first matching file is an existing .jep file in FILENAME's directory hierarc
   (expect '(("abc" "def") ("ghi" "jkl")) (ejep/servicestartup/map-regex "abc:\ndef\nghi:\njkl\n" ejep/servicestartup/glob-command-regex 'ejep/servicestartup/extract-first-and-second-from-match))
 
   (desc "ejep/servicestartup/map-regex-with-file")
-  (expect
-      '(
-        ("*.test1" "command1")
-        ("*.test2" "command2")
-        )
+  (expect '(("*.test1" "command1") ("*.test2" "command2"))
     (ejep/servicestartup/map-regex-with-file ".jep" ejep/servicestartup/glob-command-regex 'ejep/servicestartup/extract-first-and-second-from-match))
-  )
 
-    ;(ejep/protocol/from-server/dispatch (json-read-from-string "{\"fileProblems\":[{\"file\":\"/Users/gizmo/Dropbox/Documents/_projects/jep/ruby-jep/demo/test.rb\",\"problems\":[{\"message\":\"unexpected token $end\",\"line\":11,\"severity\":\"error\"},{\"message\":\"something different\",\"line\":10,\"severity\":\"warn\"}]}],\"_message\":\"ProblemUpdate\"}") 'ejep/problems/add)
+  (desc "string-match-fully-p matches")
+  (expect t
+    (ejep/servicestartup/string-match-fully-p "abc" "abc"))
+
+  (desc "string-match-fully-p matches not")
+  (expect nil
+    (ejep/servicestartup/string-match-fully-p "abc" "abcd"))
+
+  (desc "glob-pattern-command-matcher")
+  (expect '("*.text" "command1")
+    (ejep/servicestartup/glob-pattern-command-matcher '(("*.text" "command1") ("*.text2" "command2")) "test.text"))
+
+  (desc "glob-pattern-command-matcher")
+  (expect '("*.text2" "command2")
+    (ejep/servicestartup/glob-pattern-command-matcher '(("*.text" "command1") ("*.text2" "command2")) "test.text2"))
+
+  (desc "glob-pattern-command-matcher")
+  (expect nil
+    (ejep/servicestartup/glob-pattern-command-matcher '(("*.text" "command1") ("*.text2" "command2")) "test.text3"))
+
+  (desc "glob-pattern-command-matcher-with-file")
+  (expect '("*.test1" "command1")
+    (ejep/servicestartup/glob-pattern-command-matcher-with-file "./.jep" "test.test1"))
+
+  (desc "glob-pattern-command-matcher-with-file")
+  (expect '("*.test2" "command2")
+    (ejep/servicestartup/glob-pattern-command-matcher-with-file "./.jep" "test.test2"))
+
+  (desc "glob-pattern-command-matcher-with-file")
+  (expect nil
+    (ejep/servicestartup/glob-pattern-command-matcher-with-file "./.jep" "test.test3"))
+
+  (desc "convinient get jepconfig with pattern and command")
+  (expect (list (expand-file-name "./.jep") "*.test2" "command2") (ejep/servicestartup/get-jepconfig-with-pattern-and-command "./blub.test2"))
+
+  (desc "convinient get jepconfig with pattern and command -> nil")
+  (expect nil (ejep/servicestartup/get-jepconfig-with-pattern-and-command "./blub.test3"))
+
+)
 
 ;;; (setq jep (ejep/connect-to-service 9001))
-
 ;;; ejep.el ends here
-;;
-;; (insert-button "foo" 'action (lambda (x) (find-file user-init-file)))
-;;

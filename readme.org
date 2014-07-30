@@ -1,8 +1,11 @@
+#+TODO: TODO IN-PROGRESS | DONE
 * DONE connect to server and store connection in buffer local variable
 * DONE send current buffer content manually
 * TODO send buffer content automatically
 * DONE parse json results
 * DONE show error annotations in own buffer
-* TODO make problems buffer nicer
+* DONE make problems buffer nicer
 * TODO refactor some methods out to make code clearer
 * DONE experiments with font faces for error buffer
+* IN-PROGRESS implement service discovery
+* TODO connect to service
