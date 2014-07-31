@@ -33,6 +33,15 @@
 (defun ejep/protocol/content-sync-as-string (absolute-file-name buffer-data)
   (ejep/protocol/create-package (list :_message "ContentSync" :file absolute-file-name) buffer-data))
 
+(defun ejep/protocol/content-update-as-string (absolute-file-name buffer-data start end length)
+  "Creates the json object given the ABSOLUTE-FILE-NAME the BUFFER-DATA and the START, END and LENGTH hook parameters."
+  (let* ((diff (- end start))
+         (delete-operation (> length diff))
+         (first-index start)
+         (end-index (+ first-index length))
+         (data (if delete-operation "" (substring buffer-data start end))))
+    (ejep/protocol/create-package (list :_message "ContentSync" :file absolute-file-name :start first-index :end end-index) data)))
+
 (defun ejep/protocol/from-server/get-message-type (message)
   "gets the message type from a parsed message or nil"
   (cdr (assoc '_message message)))
@@ -42,7 +51,5 @@
   (let* ((type (ejep/protocol/from-server/get-message-type message)))
     (cond
      ((equal type "ProblemUpdate") (funcall problem-update message)))))
-
-
 
 (provide 'ejep-protocol)

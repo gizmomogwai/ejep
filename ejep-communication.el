@@ -15,15 +15,24 @@ associated with process."
 
 (defun ejep/communication/json-response-received (process json)
   "called when a complete jep package is received"
-  (ejep/protocol/from-server/dispatch json 'ejep/problems/add)
-  )
+  (ejep/protocol/from-server/dispatch json 'ejep/problems/add))
 
+
+(defun ejep/communication/send-package (package)
+  "Send a PACKAGE to the jep backend that is associated with the current buffer."
+  (let* ((connection (buffer-local-value 'ejep/communication/connection (current-buffer))))
+    (process-send-string connection package)))
 
 (defun ejep/communication/send-current-buffer()
-  "Send current buffer content"
+  "Send current buffer content."
   (interactive)
-  (let* ((connection (buffer-local-value 'ejep/communication/connection (current-buffer)))
-         (package (ejep/protocol/content-sync-as-string (expand-file-name (buffer-name)) (buffer-string))))
-    (process-send-string connection package)))
+  (let* ((package (ejep/protocol/content-sync-as-string (expand-file-name (buffer-name)) (buffer-string))))
+    (ejep/communication/send-package package)))
+
+(defun ejep/communication/send-buffer-update(start end length)
+  "Send update on current buffer content."
+  (message "send buffer update %s %s %s" start end length)
+  (let* ((package (ejep/protocol/content-update-as-string (expand-file-name (buffer-name)) (buffer-string)  (1- start) (1-  end) length)))
+    (ejep/communication/send-package package)))
 
 (provide 'ejep-communication)
