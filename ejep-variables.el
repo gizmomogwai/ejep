@@ -11,5 +11,7 @@
 (defvar ejep/service/process-map (make-hash-table :test 'equal)
   "Maps from config files to created processes. The key is created with `ejep/service/calc-jep-and-pattern-key', the values are a hash with keys :socket and :process to process objects.")
 
+(defvar ejep/problems/buffer "*ejep/problems*" "Buffer for ejep problems.")
+
 (provide 'ejep-variables)
 

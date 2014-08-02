@@ -1,12 +1,10 @@
-;; -*- lexical-binding: t -*-
 ;; ejep.el --- jep implementation in elisp
+
+;;; Commentary:
 ;; Copyright (C) 2014  Christian Köstlin
 ;; Author: Christian Köstlin <christian.koestlin@gmail.com>
 
-(require 'json)
-(require 'button)
-(eval-when-compile (require 'cl))
-
+;;; Code:
 (require 'ejep-variables)
 (require 'ejep-protocol)
 (require 'ejep-communication)
@@ -15,5 +13,4 @@
 (require 'ejep-interactive)
 
 (provide 'ejep)
-
 ;;; ejep.el ends here

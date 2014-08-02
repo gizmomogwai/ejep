@@ -115,6 +115,4 @@
 
   (desc "key calc for jepfile and pattern")
   (expect "pattern@file" (ejep/service/calc-jep-and-pattern-key "file" "pattern"))
-
 )
-
