@@ -23,7 +23,7 @@
     res))
 
 (defun ejep/protocol/create-package (msg binary)
-  "converts a elisp message structure and binary data to the desired package format"
+  "converts a elisp MSG structure and BINARY data to the desired package format."
   (let* ((json (json-encode msg))
          (json-length (length json))
          (binary-length (length binary))
@@ -31,8 +31,15 @@
          (res (concat (number-to-string total-length) ":" (number-to-string json-length) json binary)))
     res))
 
+(defconst ejep/protocol/backend-shutdown "Shutdown" "Message type for shutdown messages.")
+(defconst ejep/protocol/content-sync "ContentSync" "Message type for content-sync messages.")
+(defconst ejep/protocol/problem-update "ProblemUpdate" "Message type for problem update messages.")
+(defun ejep/protocol/backend-shutdown-as-string ()
+  "Creates the string representation of a Backend Shutdown message."
+  (ejep/protocol/create-package (list :_message ejep/protocol/backend-shutdown)))
+
 (defun ejep/protocol/content-sync-as-string (absolute-file-name buffer-data)
-  (ejep/protocol/create-package (list :_message "ContentSync" :file absolute-file-name) buffer-data))
+  (ejep/protocol/create-package (list :_message ejep/protocol/content-sync :file absolute-file-name) buffer-data))
 
 (defun ejep/protocol/content-update-as-string (absolute-file-name buffer-data start end length)
   "Creates the json object given the ABSOLUTE-FILE-NAME the BUFFER-DATA and the START, END and LENGTH hook parameters."
@@ -41,16 +48,16 @@
          (first-index start)
          (end-index (+ first-index length))
          (data (if delete-operation "" (substring buffer-data start end))))
-    (ejep/protocol/create-package (list :_message "ContentSync" :file absolute-file-name :start first-index :end end-index) data)))
+    (ejep/protocol/create-package (list :_message ejep/protocol/content-sync :file absolute-file-name :start first-index :end end-index) data)))
 
 (defun ejep/protocol/from-server/get-message-type (message)
-  "gets the message type from a parsed message or nil"
+  "Gets the type from a parsed MESSAGE, or nil."
   (cdr (assoc '_message message)))
 
 (defun ejep/protocol/from-server/dispatch (message problem-update)
-  "dispatches to the right function passing the whole message"
+  "Dispatches to the right function passing the whole MESSAGE."
   (let* ((type (ejep/protocol/from-server/get-message-type message)))
     (cond
-     ((equal type "ProblemUpdate") (funcall problem-update message)))))
+     ((equal type ejep/protocol/problem-update) (funcall problem-update message)))))
 
 (provide 'ejep-protocol)

@@ -34,4 +34,13 @@ associated with process."
   (let* ((package (ejep/protocol/content-update-as-string (expand-file-name (buffer-name)) (buffer-string)  (1- start) (1-  end) length)))
     (ejep/communication/send-package package)))
 
+(defun ejep/communication/send-backend-shutdown()
+  "Sends a Backend Shutdown message."
+  (ejep/communication/send-package (ejep/protocol/backend-shutdown-as-string)))
+
 (provide 'ejep-communication)
+
+;;(defun m-k-h ()
+;;  (message "killing buffer %s" (current-buffer)))
+;;
+;;(add-hook 'kill-buffer-hook 'm-k-h)
