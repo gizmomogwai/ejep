@@ -3,7 +3,7 @@
 (require 'ejep)
 
 (expectations
-  ;; ejep/protocol
+  ;; protocol
   (desc "test jep protocol regexp")
   (expect 0 (string-match ejep/protocol/header "15:1{"))
 
@@ -20,7 +20,7 @@
   (expect '(((kind . "request")) "xndjs3") (ejep/protocol/get-json-and-binary "25:19{\"kind\": \"request\"}xndjs3"))
 
   (desc "jep content sync message")
-  (expect "60:52{\"_message\":\"ContentSync\", \"file\":\"my-file-name.rb\"}the data" (ejep/protocol/content-sync-as-string "my-file-name.rb" "the data"))
+  (expect "59:51{\"_message\":\"ContentSync\",\"file\":\"my-file-name.rb\"}the data" (ejep/protocol/content-sync-as-string "my-file-name.rb" "the data"))
 
   (desc "get message type")
   (expect "ProblemUpdate" (ejep/protocol/from-server/get-message-type (json-read-from-string "{\"fileProblems\":[{\"file\":\"/Users/gizmo/Dropbox/Documents/_projects/jep/ruby-jep/demo/test.rb\",\"problems\":[{\"message\":\"unexpected token $end\",\"line\":16,\"severity\":\"error\"}]}],\"_message\":\"ProblemUpdate\"}")))
@@ -30,6 +30,7 @@
     (stub ProblemUpdateCallback => "problem-update-callback")
     (ejep/protocol/from-server/dispatch (json-read-from-string "{\"fileProblems\":[{\"file\":\"/Users/gizmo/Dropbox/Documents/_projects/jep/ruby-jep/demo/test.rb\",\"problems\":[{\"message\":\"unexpected token $end\",\"line\":16,\"severity\":\"error\"}]}],\"_message\":\"ProblemUpdate\"}") 'ProblemUpdateCallback))
 
+  ;; stdapi
   (desc "directory-file-name gets the filename of a directory")
   (expect "/abc/def" (directory-file-name "/abc/def/"))
 
@@ -39,6 +40,7 @@
   (desc "file-name-directory gets itself for a directory")
   (expect "/abc/test/" (file-name-directory "/abc/test/"))
 
+  ;; service
   (desc "ejep/service/parent-directory")
   (expect "/abc/" (ejep/service/parent-directory "/abc/def/"))
 
@@ -115,4 +117,12 @@
 
   (desc "key calc for jepfile and pattern")
   (expect "pattern@file" (ejep/service/calc-jep-and-pattern-key "file" "pattern"))
+
+  ;; problems
+  (desc "font calculation for severity")
+  (expect "ejep/problems/faces/testerle" (ejep/problems/face-for-severity "testerle"))
+
+  (desc "special number to string works for numbers and nil")
+  (expect "" (ejep/problems/number-to-string nil))
+  (expect "123" (ejep/problems/number-to-string 123))
 )

@@ -31,7 +31,6 @@ associated with process."
 
 (defun ejep/communication/send-buffer-update(start end length)
   "Send update on current buffer content."
-  (message "send buffer update %s %s %s" start end length)
   (let* ((package (ejep/protocol/content-update-as-string (expand-file-name (buffer-name)) (buffer-string)  (1- start) (1-  end) length)))
     (ejep/communication/send-package package)))
 
