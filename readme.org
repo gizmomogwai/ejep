@@ -1,17 +1,3 @@
 #+TODO: TODO IN-PROGRESS | DONE
-* DONE connect to server and store connection in buffer local variable
-* DONE send current buffer content manually
-* DONE parse json results
-* DONE show error annotations in own buffer
-* DONE make problems buffer nicer
-* DONE experiments with font faces for error buffer
-* DONE implement service discovery
-* DONE connect to service
-* DONE send buffer content automatically
-after-change-hook
-* DONE spring von der problems view geht nicht zurück in den buffer
-* DONE refactor some methods out to make code clearer
-* DONE use tabulated-list-mode for error showing
-* TODO highlight problems view again
-* TODO get up to code coverage again
-* TODO cleanup problems, as there are some unused methods for sure
+* EJEP - emacs frontend for [[https://github.com/mthiede/jep/blob/master/protocol.md][JEP]]
+
