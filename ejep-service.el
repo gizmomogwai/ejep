@@ -128,7 +128,7 @@ PAIRS is a list of regexp strings and commands."
           (delete-process process)
           (remhash key ejep/service/process-map)))))
 
-(defun ejep/service/get-process (filename buffer)
+(defun ejep/service/get-process (filename)
   "Return the backend process responsible for FILENAME."
   (let* ((found (ejep/service/get-jepconfig-with-pattern-and-command filename))
          (jepconfig (first found))

@@ -48,25 +48,32 @@
      'tabulated-list-entries
      (list problem
            (vector severity
-                 (list message 'follow-link t 'ejep/problems/attachment problem 'action 'ejep/problems/goto)
-                 line-string
-                 column-string
-                 file)))))
+                   (list message 'follow-link t 'ejep/problems/attachment problem 'action 'ejep/problems/goto)
+                   line-string
+                   column-string
+                   file)))))
 
 
-  (defun ejep/problems/add-problems-for-a-file (file-problems)
-    "Adds all FILE-PROBLEMS to ejeps problems buffer for a file."
-    (let* ((file (cdr (assoc 'file file-problems)))
-           (problems (cdr (assoc 'problems file-problems))))
-      (mapcar (-partial 'ejep/problems/add-a-problem-for-a-file file) problems)))
+(defun ejep/problems/add-problems-for-a-file (file-problems)
+  "Adds all FILE-PROBLEMS to ejeps problems buffer for a file."
+  (let* ((file (cdr (assoc 'file file-problems)))
+         (problems (cdr (assoc 'problems file-problems))))
+    (mapcar (-partial 'ejep/problems/add-a-problem-for-a-file file) problems)))
 
-  (defun ejep/problems/add (message)
-    "add problems to ejeps problems buffer"
-    (with-current-buffer (get-buffer-create ejep/problems/buffer)
-      (set 'tabulated-list-entries nil)
-      (let* ((file-problems (cdr (assoc 'fileProblems message))))
-        (mapcar 'ejep/problems/add-problems-for-a-file file-problems))
-      (tabulated-list-revert)))
+(defun ejep/problems/get-buffer()
+  "Return the ejep problems buffer in the correct mode, no matter what."
+  (let* ((buffer (get-buffer-create ejep/problems/buffer)))
+    (with-current-buffer buffer
+      (ejep/problems/mode))
+    buffer))
+
+(defun ejep/problems/add (message)
+  "add problems to ejeps problems buffer"
+  (with-current-buffer (ejep/problems/get-buffer)
+    (set 'tabulated-list-entries nil)
+    (let* ((file-problems (cdr (assoc 'fileProblems message))))
+      (mapcar 'ejep/problems/add-problems-for-a-file file-problems))
+    (tabulated-list-revert)))
 ;;(let* ((files-problems (cdr (assoc 'fileProblems message))))
 ;;(mapcar 'ejep/problems/add-for-file files-problems))))
 
@@ -81,8 +88,8 @@
                                ("File" 0 t)])
   (setq tabulated-list-padding 1)
   ;; tabulated-list-entries #'flycheck-error-list-entries
-  ;(add-hook 'tabulated-list-revert-hook #'flycheck-error-list-set-mode-line
-   ;         nil 'local)
+                                        ;(add-hook 'tabulated-list-revert-hook #'flycheck-error-list-set-mode-line
+                                        ;         nil 'local)
   (tabulated-list-init-header))
 
 

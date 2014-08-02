@@ -1,4 +1,5 @@
 (require 'ejep-variables)
+(require 'json)
 
 (defun ejep/protocol/get-json-data-and-binary (string)
   "Return the unparsed json data and the binary data."

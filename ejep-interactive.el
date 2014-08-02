@@ -13,7 +13,7 @@
 (defun ejep/connect ()
     "connects the current buffer to an backend."
   (interactive)
-  (ejep/service/get-process (buffer-file-name) (current-buffer))
+  (ejep/service/get-process (buffer-file-name))
   (ejep/communication/send-current-buffer)
   (ejep/content-sync/install-hook))
 
