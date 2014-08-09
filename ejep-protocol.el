@@ -1,8 +1,14 @@
+;;; ejep-protocol.el --- protocol layer of ejep
+;;; Commentary:
+;; packages and unpackages jep message
+
+;;; Code:
+
 (require 'ejep-variables)
 (require 'json)
 
 (defun ejep/protocol/get-json-data-and-binary (string)
-  "Return the unparsed json data and the binary data."
+  "Dissect the STRING of the message into json data and binary data."
   (let* ((match (string-match ejep/protocol/header string))
          (overall-length (if match (string-to-number (match-string 1 string))))
          (json-length (if match (string-to-number (match-string 2 string))))
@@ -16,14 +22,14 @@
       nil)))
 
 (defun ejep/protocol/get-json-and-binary (string)
-  "Like `jep/protocol/get-json-data-and-binary' but the json-data is parsed."
+  "Process the STRING like `jep/protocol/get-json-data-and-binary', but parse the json-data."
   (let* ((help (ejep/protocol/get-json-data-and-binary string))
          (json (if help (json-read-from-string (car help))))
          (res (if json (list json (second help)))))
     res))
 
 (defun ejep/protocol/create-package (msg binary)
-  "converts a elisp MSG structure and BINARY data to the desired package format."
+  "Convert a elisp MSG structure and BINARY data to the desired package format."
   (let* ((json (json-encode msg))
          (json-length (length json))
          (binary-length (length binary))
@@ -35,14 +41,14 @@
 (defconst ejep/protocol/content-sync "ContentSync" "Message type for content-sync messages.")
 (defconst ejep/protocol/problem-update "ProblemUpdate" "Message type for problem update messages.")
 (defun ejep/protocol/backend-shutdown-as-string ()
-  "Creates the string representation of a Backend Shutdown message."
-  (ejep/protocol/create-package (list :_message ejep/protocol/backend-shutdown)))
+  "Create the string representation of a Backend Shutdown message."
+  (ejep/protocol/create-package (list :_message ejep/protocol/backend-shutdown) nil))
 
 (defun ejep/protocol/content-sync-as-string (absolute-file-name buffer-data)
   (ejep/protocol/create-package (list :_message ejep/protocol/content-sync :file absolute-file-name) buffer-data))
 
 (defun ejep/protocol/content-update-as-string (absolute-file-name buffer-data start end length)
-  "Creates the json object given the ABSOLUTE-FILE-NAME the BUFFER-DATA and the START, END and LENGTH hook parameters."
+  "Create the json object given the ABSOLUTE-FILE-NAME the BUFFER-DATA and the START, END and LENGTH hook parameters."
   (let* ((diff (- end start))
          (delete-operation (> length diff))
          (first-index start)
@@ -55,9 +61,10 @@
   (cdr (assoc '_message message)))
 
 (defun ejep/protocol/from-server/dispatch (message problem-update)
-  "Dispatches to the right function passing the whole MESSAGE."
+  "Dispatch the MESSAGE to the right function for the PROBLEM-UPDATE."
   (let* ((type (ejep/protocol/from-server/get-message-type message)))
     (cond
      ((equal type ejep/protocol/problem-update) (funcall problem-update message)))))
 
 (provide 'ejep-protocol)
+;;; ejep-protocol.el ends here

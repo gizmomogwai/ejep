@@ -1,6 +1,13 @@
+;;; ejep-problems.el --- problem list for ejep
+;;; Commentary:
+;;; Code:
+
 ;; -*- lexical-binding: t -*-
+
+(require 'ejep-variables)
+(require 'dash)
 (defun ejep/problems/face-for-severity (severity)
-  "Returns a face for SEVERITY."
+  "Return a face for SEVERITY."
   (format "ejep/problems/faces/%s" severity))
 
 (defun ejep/problems/format (text font)
@@ -8,11 +15,11 @@
   (propertize text 'font-lock-face font))
 
 (defun ejep/problems/number-to-string (number-or-nil)
-  "Converts NUMBER-OR-NIL to a string."
+  "Convert NUMBER-OR-NIL to a string."
   (if number-or-nil (number-to-string number-or-nil) ""))
 
 (defun ejep/problems/add-a-problem-for-a-file (file problem)
-  "Adds one PROBLEM for a FILE to the ejep problems buffer."
+  "For one FILE add one PROBLEM to the ejep problems buffer."
   (let* ((severity (cdr (assoc 'severity problem)))
          (face (ejep/problems/face-for-severity severity))
          (severity-string (ejep/problems/format (substring severity 0 1) face))
@@ -58,7 +65,7 @@
   (with-current-buffer (ejep/problems/get-buffer)
     (set 'tabulated-list-entries nil)
     (let* ((file-problems (cdr (assoc 'fileProblems message))))
-      (mapcar 'ejep/problems/add-problems-for-a-file file-problems))
+      (mapc 'ejep/problems/add-problems-for-a-file file-problems))
     (tabulated-list-revert)))
 
 (define-derived-mode ejep/problems/mode tabulated-list-mode "Jep problems"
@@ -91,8 +98,9 @@
   (let* ((problem (button-get button 'ejep/problems/attachment))
          (file (ejep/problems/problem-file problem))
          (line (ejep/problems/problem-line problem))
-         (target-buffer (find-buffer-visiting file))
-         (target-buffer-life (buffer-live-p target-buffer)))
+         (target-buffer (find-buffer-visiting file)))
     (ejep/problems/goto-lowlevel line target-buffer)))
 
 (provide 'ejep-problems)
+;;; ejep-problems.el ends here
+

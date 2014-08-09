@@ -1,3 +1,9 @@
+;;; ejep-variables.el --- defines ejep wide used variables and constants
+;;; Commentary:
+;;; Code:
+
+(eval-when-compile (require 'cl))
+
 (defconst ejep/config-filename ".jep"
   "Filename of JEP configuration files.")
 
@@ -11,7 +17,7 @@
   "Regex used for finding the communication port of a jep service.")
 
 (defvar ejep/service/process-map (make-hash-table :test 'equal)
-  "Maps from config files to created processes. The key is created with `ejep/service/calc-jep-and-pattern-key', the values are a hash with keys :socket and :process to process objects.")
+  "Map from config files to created processes.  The key is created with `ejep/service/calc-jep-and-pattern-key', the values are a hash with keys :socket and :process to process objects.")
 
 (defvar ejep/problems/buffer "*ejep/problems*" "Buffer for ejep problems.")
 
@@ -35,3 +41,4 @@
   severity message line column file)
 
 (provide 'ejep-variables)
+;;; ejep-variables.el ends here
