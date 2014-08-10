@@ -1,0 +1,6 @@
+1. Open .gitconfig
+2. fire up ejep to get to the
+3. problems list
+4. the problems list also contains my global .gitconfig
+   (because the backend knows about this)
+4. jump to a problem and fix it
