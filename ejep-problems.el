@@ -98,7 +98,7 @@
   (let* ((problem (button-get button 'ejep/problems/attachment))
          (file (ejep/problems/problem-file problem))
          (line (ejep/problems/problem-line problem))
-         (target-buffer (find-buffer-visiting file)))
+         (target-buffer (or (find-buffer-visiting file) (find-file file))))
     (ejep/problems/goto-lowlevel line target-buffer)))
 
 (provide 'ejep-problems)

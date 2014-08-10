@@ -1,3 +1,3 @@
 #+TODO: TODO IN-PROGRESS | DONE
 * EJEP - emacs frontend for [[https://github.com/mthiede/jep/blob/master/protocol.md][JEP]]
-
+<script type="text/javascript" src="https://asciinema.org/a/11388.js" id="asciicast-11388" async></script>

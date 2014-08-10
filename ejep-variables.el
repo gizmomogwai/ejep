@@ -13,7 +13,7 @@
 (defconst ejep/protocol/header "^\\([0-9]+\\):\\([0-9]+\\){"
   "Regex to parse jep headers.")
 
-(defconst ejep/service/regex "JEP service, listening on port \\(.*\\)\n"
+(defconst ejep/service/regex "^JEP service, listening on port \\(.*\\)$"
   "Regex used for finding the communication port of a jep service.")
 
 (defvar ejep/service/process-map (make-hash-table :test 'equal)
