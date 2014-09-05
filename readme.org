@@ -3,3 +3,10 @@
 See this small introduction [[https://asciinema.org/a/11388][video]] for a first
 look at ejep in action.
 
+*** First steps
+Please install
+- [[https://www.ruby-lang.org][ruby]] (preferrably rvm),
+- [[https://github.com/ruby/rake][rake]] (preferrably with gem) and
+- [[https://github.com/cask/cask][cask]].
+The tests work best with emacs 24.4.50. Make sure to prepare cask by
+running cask install.
