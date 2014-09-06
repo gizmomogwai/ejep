@@ -71,11 +71,11 @@
   (expect "a.*b" (ejep/service/glob-pattern-to-regexp "a*b"))
 
   (desc "ejep/service/map-regex")
-  (expect '(("abc" "def") ("ghi" "jkl")) (ejep/service/map-regex "abc:\ndef\nghi:\njkl\n" ejep/service/glob-command-regex 'ejep/service/extract-first-and-second-from-match))
+  (expect '(("abc" "def") ("ghi" "jkl")) (ejep/service/map-regex ejep/service/glob-command-regex "abc:\ndef\nghi:\njkl\n" 'ejep/service/extract-first-and-second-from-match))
 
   (desc "ejep/service/map-regex-with-file")
   (expect '(("*.test1" "command1") ("*.test2" "command2"))
-    (ejep/service/map-regex-with-file ".jep" ejep/service/glob-command-regex 'ejep/service/extract-first-and-second-from-match))
+    (ejep/service/map-regex-with-file ejep/service/glob-command-regex ".jep" 'ejep/service/extract-first-and-second-from-match))
 
   (desc "string-match-fully-p matches")
   (expect t

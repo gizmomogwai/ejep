@@ -17,11 +17,10 @@
 (defun ejep/connect ()
   "Connect the current buffer to an backend."
   (interactive)
-  (ejep/service/get-process (buffer-file-name))
+  (ejep/service/get-or-create-process (buffer-file-name))
   (ejep/communication/send-current-buffer)
   (ejep/content-sync/install-hook)
-  (add-hook 'kill-buffer-hook 'ejep/disconnect nil t)
-  )
+  (add-hook 'kill-buffer-hook 'ejep/disconnect nil t))
 
 (defun ejep/connect-if-possible ()
   "Connect to a jep process if a matching .jep file is found."

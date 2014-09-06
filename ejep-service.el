@@ -1,3 +1,7 @@
+;;; ejep-service.el --- handles communication with the jep process
+;;; Commentary:
+;;; Code:
+
 (require 'ejep-communication)
 
 (defun ejep/service/extract-first-and-second-from-match (text)
@@ -9,9 +13,16 @@ See `string-match' and `match-string'."
   "Return the parent directory of DIRECTORY."
   (file-name-directory (directory-file-name directory)))
 
-(defun ejep/service/find-matching-jep-file (filename exists-p matches-p &optional path)
-  "Return the jep-file, the command and the pattern from the first matching .jep file for FILENAME or nil.
-The first matching file is an existing .jep file in FILENAME's directory hierarchie, that has a command associated with FILENAME. EXISTS-P and MATCHES-P are used to analyze this. EXISTS-P is usually just `file-exists-p', MATCHES has to open the file and check if it contains a matching pattern and return the associated command."
+(defun ejep/service/find-matching-jep-file
+    (filename exists-p matches-p &optional path)
+  "Return the best matching jep-file, command and pattern.
+The first matching file is an existing .jep file in FILENAME's
+directory hierarchie, that has a command associated with FILENAME.
+EXISTS-P and MATCHES-P are used to analyze this.  EXISTS-P is usually
+just `file-exists-p', MATCHES has to open the file and check if it
+contains a matching pattern and return the associated command.  PATH
+is used for recursion, so it can be nil for the first call, but is
+then internally used with the path-hierarchy."
   (let* ((current-dir (expand-file-name (if path path (file-name-directory filename))))
          (jep-file-name (expand-file-name ejep/config-filename current-dir))
          (jep-exists (funcall exists-p jep-file-name))
@@ -21,7 +32,8 @@ The first matching file is an existing .jep file in FILENAME's directory hierarc
              (new-dir (not (string= parent-dir current-dir))))
         (if new-dir (ejep/service/find-matching-jep-file filename exists-p matches-p parent-dir))))))
 
-;; thanks to “Pascal J Bourguignon” and “TheFlyingDutchman <zzbba...@aol.com>”. 2010-09-02
+;; thanks to “Pascal J Bourguignon” and “TheFlyingDutchman
+;; <zzbba...@aol.com>”. 2010-09-02
 (defun ejep/service/get-string-from-file (filename)
   "Return FILENAME's file content."
   (with-temp-buffer
@@ -38,12 +50,12 @@ The first matching file is an existing .jep file in FILENAME's directory hierarc
     res))
 
 (defun ejep/service/string-match-fully-p (pattern text)
-  "Return t if PATTERN matches TEXT fully."
+  "Return t if PATTERN match TEXT fully."
   (let ((match (string-match pattern text)))
     (if match (eq (match-end 0) (length text)) nil)))
 
 (defun ejep/service/glob-pattern-command-matcher (pairs text)
-  "Return the matching pattern and command for TEXT.
+  "Return the first pair of PAIRS whose regexp is a match for TEXT.
 PAIRS is a list of regexp strings and commands."
   (dolist (head pairs)
     (if (ejep/service/string-match-fully-p (ejep/service/glob-pattern-to-regexp (car head)) text)
@@ -51,13 +63,14 @@ PAIRS is a list of regexp strings and commands."
 
 (defun ejep/service/glob-pattern-command-matcher-with-file (pattern-command-file filename)
   "Return a matching command from PATTERN-COMMAND-FILE for FILENAME or nil."
-  (let* ((pairs (ejep/service/map-regex-with-file ejep/config-filename ejep/service/glob-command-regex (function ejep/service/extract-first-and-second-from-match))))
+  (let* ((pairs (ejep/service/map-regex-with-file
+                 ejep/service/glob-command-regex ejep/config-filename  (function ejep/service/extract-first-and-second-from-match))))
     (ejep/service/glob-pattern-command-matcher pairs filename)))
 
-(defun ejep/service/map-regex (text regex fn)
-  "Map the REGEX over the FILENAME executing FN.
-   FN is called for each successful `string-match' for the content of FILENAME.
-   Returns the results of the FN as a list."
+(defun ejep/service/map-regex (regex text fn)
+  "Map the REGEX over the TEXT executing FN.
+FN is called for each successful `string-match' for the content of FILENAME.
+Returns the results of the FN as a list."
   (let* ((search-idx 0)
          (res))
     (while (string-match regex text search-idx)
@@ -65,9 +78,10 @@ PAIRS is a list of regexp strings and commands."
       (setq search-idx (match-end 0)))
     res))
 
-(defun ejep/service/map-regex-with-file (filename regex fn)
-  "Use `ejep/service/map-regex' with the contents of FILENAME."
-  (ejep/service/map-regex (ejep/service/get-string-from-file filename) regex fn))
+(defun ejep/service/map-regex-with-file (regex filename fn)
+  "Map the REGEX over the content of FILENAME executing FN."
+  (ejep/service/map-regex regex (ejep/service/get-string-from-file
+                                 filename) fn))
 
 (defun ejep/service/get-jepconfig-with-pattern-and-command (filename)
   "Return jep-config, pattern and command for FILENAME or nil."
@@ -79,7 +93,8 @@ PAIRS is a list of regexp strings and commands."
   (format "%s@%s" pattern jep))
 
 (defun ejep/service/start-backend-process (command filename)
-  "Return the process and the port of the launched jep process given by COMMAND."
+  "Execute COMMAND to create the jep process for FILENAME.
+Return the created process together with the tcp port used for communications."
   (let* ((process-connection-type nil)
          (buffer-name (generate-new-buffer (format "*jep-process-for--%s*" filename)))
          (interpolated-command (substitute-in-file-name command))
@@ -128,7 +143,7 @@ PAIRS is a list of regexp strings and commands."
           (delete-process process)
           (remhash key ejep/service/process-map)))))
 
-(defun ejep/service/get-process (filename)
+(defun ejep/service/get-or-create-process (filename)
   "Return the backend process responsible for FILENAME."
   (let* ((found (ejep/service/get-jepconfig-with-pattern-and-command filename))
          (jepconfig (first found))
@@ -140,14 +155,17 @@ PAIRS is a list of regexp strings and commands."
         (gethash :socket already-launched)
       (let* ((launch-info (ejep/service/connect-to-backend-process command filename))
              (process (first launch-info))
-             (socket (second launch-info))
-             (res (make-hash-table :test 'equal))
-             (new-entry (make-hash-table :test 'equal)))
-        (puthash :process process new-entry)
-        (puthash :socket socket new-entry)
-        (puthash key new-entry ejep/service/process-map)
-        (set (make-local-variable 'ejep/communication/connection) socket)
-        socket))))
+             (socket (second launch-info)))
+        (if (and process socket)
+            (let* ((res (make-hash-table :test 'equal))
+                   (new-entry (make-hash-table :test 'equal)))
+              (puthash :process process new-entry)
+              (puthash :socket socket new-entry)
+              (puthash key new-entry ejep/service/process-map)
+              (set (make-local-variable 'ejep/communication/connection) socket)
+              socket)
+          nil)))))
 
 (provide 'ejep-service)
+;;; ejep-service.el ends here
 
